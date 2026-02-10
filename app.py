@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 import fitz  # PyMuPDF
-from googlesearch import search
 
 # Page Configuration
 st.set_page_config(page_title="Manuals Finder AI", layout="centered")
@@ -22,8 +21,12 @@ with st.sidebar:
     st.title("Settings")
     api_key = st.text_input("Enter Gemini API Key", type="password")
     if api_key:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash') # Flash သုံးရင် ပိုမြန်တယ်
+        try:
+            genai.configure(api_key=api_key)
+            # Gemini-Pro ကို သုံးထားပေးတယ် (ပိုငြိမ်အောင်လို့)
+            model = genai.GenerativeModel('gemini-pro') 
+        except Exception as e:
+            st.error(f"API Setup Error: {e}")
 
 # Main App UI
 st.title("🛠️ Manuals Finder AI")
@@ -31,19 +34,18 @@ st.subheader("အင်ဂျင်နီယာသုံး AI လက်ထေ�
 
 tab1, tab2, tab3 = st.tabs(["🔍 Search Manuals", "💬 AI Chat", "📄 PDF Analyst"])
 
-# Tab 1: Search Logic
+# Tab 1: Search Logic (Direct Google Link နည်းလမ်း)
 with tab1:
     query = st.text_input("Model Number ရိုက်ထည့်ပါ (ဥပမာ- FX3U, S7-1200)")
     if st.button("Search PDF"):
         if query:
-            with st.spinner("အင်တာနက်မှ ရှာဖွေနေပါသည်..."):
-                results = list(search(f"{query} manual filetype:pdf", num_results=5))
-                for url in results:
-                    st.write(f"📄 [Download Manual]({url})")
+            search_url = f"https://www.google.com/search?q={query}+manual+filetype:pdf"
+            st.success(f"ရှာဖွေမှု အဆင်သင့်ဖြစ်ပါပြီ!")
+            st.markdown(f"### 👉 [ဒီနေရာကိုနှိပ်ပြီး {query} Manual ကို ကြည့်ပါ]({search_url})")
         else:
             st.warning("Model Number အရင်ရိုက်ပါ")
 
-# Tab 2: AI Chat (NotebookLM Style အနီးစပ်ဆုံး)
+# Tab 2: AI Chat
 with tab2:
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -59,24 +61,30 @@ with tab2:
 
         with st.chat_message("assistant"):
             if api_key:
-                response = model.generate_content(f"Answer in Myanmar language: {prompt}")
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                try:
+                    response = model.generate_content(f"Answer in Myanmar language: {prompt}")
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                except Exception as e:
+                    st.error(f"AI Error: {e}")
             else:
                 st.error("Sidebar မှာ API Key အရင်ထည့်ပေးပါ")
 
-# Tab 3: PDF Analyst (NotebookLM လိုမျိုး PDF ဖတ်ခိုင်းခြင်း)
+# Tab 3: PDF Analyst
 with tab3:
     uploaded_file = st.file_uploader("Manual PDF ကို ဒီမှာ တင်ပါ", type="pdf")
     if uploaded_file is not None:
-        doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-        text = ""
-        for page in doc:
-            text += page.get_text()
-        
-        st.success("PDF ဖတ်လို့ ပြီးပါပြီ!")
-        question = st.text_input("ဒီ PDF ထဲက ဘာကို အနှစ်ချုပ်ပေးရမလဲ?")
-        if st.button("Ask PDF"):
-            full_prompt = f"Based on this PDF text: {text[:10000]}... Answer this in Myanmar: {question}"
-            response = model.generate_content(full_prompt)
-            st.write(response.text)
+        try:
+            doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+            text = ""
+            for page in doc:
+                text += page.get_text()
+            
+            st.success("PDF ဖတ်လို့ ပြီးပါပြီ!")
+            question = st.text_input("ဒီ PDF ထဲက ဘာကို သိချင်လဲ?")
+            if st.button("Ask PDF"):
+                full_prompt = f"Using this text: {text[:8000]}, answer this in Myanmar: {question}"
+                response = model.generate_content(full_prompt)
+                st.write(response.text)
+        except Exception as e:
+            st.error(f"PDF Error: {e}")
