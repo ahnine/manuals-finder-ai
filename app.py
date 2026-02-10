@@ -13,7 +13,7 @@ with st.sidebar:
             genai.configure(api_key=api_key)
             # Engineer တစ်ယောက်လို ပြုမူရန် Instruction ပေးခြင်း
             model = genai.GenerativeModel(
-                model_name="gemini-1.5-flash",
+                model_name="models/gemini-1.5-flash",
                 system_instruction="မင်းက အတွေ့အကြုံရင့်ကျက်တဲ့ Electrical Engineer တစ်ယောက်ဖြစ်တယ်။ မင်းကို မေးသမျှ မေးခွန်းတွေကို နည်းပညာပိုင်းဆိုင်ရာ သေချာကျနစွာနဲ့ မြန်မာဘာသာစကားဖြင့်သာ ရှင်းပြရမယ်။ အထူးသဖြင့် Wiring, PLC, Industrial Control နဲ့ Electrical Safety ပိုင်းတွေကို ကျွမ်းကျင်စွာ ဖြေပေးရမယ်။"
             )
             st.success("Engineer AI is Ready!")
