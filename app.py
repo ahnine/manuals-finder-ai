@@ -13,7 +13,7 @@ with st.sidebar:
         try:
             genai.configure(api_key=api_key)
             # Model နာမည်ကို အလုပ်လုပ်မည့် version အမှန်သို့ ပြောင်းလဲခြင်း
-            model = genai.GenerativeModel('gemini-1.5-flash') 
+            model = genai.GenerativeModel('models/gemini-1.5-flash') 
         except Exception as e:
             st.error(f"API Setup Error: {e}")
 
