@@ -1,20 +1,10 @@
 import streamlit as st
 import google.generativeai as genai
 import fitz  # PyMuPDF
+from googlesearch import search
 
 # Page Configuration
 st.set_page_config(page_title="Manuals Finder AI", layout="centered")
-
-# CSS for Burmese Font & Styling
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Pyidaungsu&display=swap');
-    html, body, [class*="css"]  {
-        font-family: 'Pyidaungsu', sans-serif;
-    }
-    .stButton>button { width: 100%; border-radius: 20px; }
-    </style>
-    """, unsafe_allow_html=True)
 
 # API Key Setup
 with st.sidebar:
@@ -23,8 +13,8 @@ with st.sidebar:
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            # Gemini-Pro ကို သုံးထားပေးတယ် (ပိုငြိမ်အောင်လို့)
-            model = genai.GenerativeModel('gemini-pro') 
+            # 404 Error ရှင်းရန် gemini-1.5-flash ကို သုံးထားသည်
+            model = genai.GenerativeModel('gemini-1.5-flash') 
         except Exception as e:
             st.error(f"API Setup Error: {e}")
 
@@ -34,14 +24,23 @@ st.subheader("အင်ဂျင်နီယာသုံး AI လက်ထေ�
 
 tab1, tab2, tab3 = st.tabs(["🔍 Search Manuals", "💬 AI Chat", "📄 PDF Analyst"])
 
-# Tab 1: Search Logic (Direct Google Link နည်းလမ်း)
+# Tab 1: Search Logic (App ထဲမှာတင် PDF Link များ ပြပေးရန်)
 with tab1:
-    query = st.text_input("Model Number ရိုက်ထည့်ပါ (ဥပမာ- FX3U, S7-1200)")
+    query = st.text_input("Model Number ရိုက်ထည့်ပါ (ဥပမာ- FX3U, Danfoss FC302)")
     if st.button("Search PDF"):
         if query:
-            search_url = f"https://www.google.com/search?q={query}+manual+filetype:pdf"
-            st.success(f"ရှာဖွေမှု အဆင်သင့်ဖြစ်ပါပြီ!")
-            st.markdown(f"### 👉 [ဒီနေရာကိုနှိပ်ပြီး {query} Manual ကို ကြည့်ပါ]({search_url})")
+            with st.spinner("အင်တာနက်မှ PDF များကို ရှာဖွေနေပါသည်..."):
+                try:
+                    # Google Search ကို App ထဲမှာတင် Result ထုတ်ပေးရန်
+                    search_results = search(f"{query} manual filetype:pdf", num_results=10)
+                    
+                    st.success(f"{query} အတွက် တွေ့ရှိသော PDF များ -")
+                    for idx, url in enumerate(search_results, 1):
+                        # Link များကို App ထဲမှာတင် တန်းပြပေးခြင်း
+                        st.markdown(f"{idx}. 📄 [Manual Link {idx}]({url})")
+                        st.caption(f"Source: {url[:60]}...")
+                except Exception as e:
+                    st.error(f"Search Error: {e}")
         else:
             st.warning("Model Number အရင်ရိုက်ပါ")
 
@@ -66,7 +65,7 @@ with tab2:
                     st.markdown(response.text)
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                 except Exception as e:
-                    st.error(f"AI Error: {e}")
+                    st.error(f"AI Error: {e}") # 404 models error ရှင်းရန် gemini-1.5-flash သုံးထားပါသည်
             else:
                 st.error("Sidebar မှာ API Key အရင်ထည့်ပေးပါ")
 
