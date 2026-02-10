@@ -12,8 +12,8 @@ with st.sidebar:
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            # အငြိမ်ဆုံး Model နာမည်ကို သုံးထားသည်
-            model = genai.GenerativeModel('gemini-1.5-flash-latest') 
+            # Model နာမည်ကို အလုပ်လုပ်မည့် version အမှန်သို့ ပြောင်းလဲခြင်း
+            model = genai.GenerativeModel('gemini-1.5-flash') 
         except Exception as e:
             st.error(f"API Setup Error: {e}")
 
@@ -23,17 +23,15 @@ st.subheader("အင်ဂျင်နီယာသုံး AI လက်ထေ�
 
 tab1, tab2, tab3 = st.tabs(["🔍 Search Manuals", "💬 AI Chat", "📄 PDF Analyst"])
 
-# Tab 1: Search Logic (Streamlit Cloud အတွက် အလုပ်လုပ်မည့် နည်းလမ်းသစ်)
+# Tab 1: Search Logic (App ထဲမှာတင် Google Result မြင်ရအောင် Embed လုပ်နည်း)
 with tab1:
-    query = st.text_input("Model Number ရိုက်ထည့်ပါ (ဥပမာ- FX3U, Danfoss FC302)")
+    query = st.text_input("Model Number ရိုက်ထည့်ပါ (ဥပမာ- FX3U, FC302)")
     if st.button("Search PDF"):
         if query:
-            st.success(f"{query} အတွက် ရှာဖွေမှု အဆင်သင့်ဖြစ်ပါပြီ!")
-            # Google Search Result ကို အပြင်မထွက်ဘဲ App ထဲမှာတင် Link ပေးထားခြင်း
-            st.info("အောက်ပါ Link ကို နှိပ်၍ PDF များကို တိုက်ရိုက်ကြည့်နိုင်ပါသည်-")
-            search_url = f"https://www.google.com/search?q={query}+manual+filetype:pdf"
-            st.markdown(f"### 📄 [Click Here: View PDF Search Results for {query}]({search_url})")
-            st.caption("မှတ်ချက် - Streamlit Cloud ၏ လုံခြုံရေးအရ PDF များကို အပြင် Link ဖြင့်သာ တိုက်ရိုက်ပြသပေးနိုင်ပါသည်။")
+            st.success(f"{query} အတွက် ရှာဖွေမှု ရလဒ်များ -")
+            # Google Search ကို App ထဲမှာတင် Frame အနေနဲ့ ပြသခြင်း
+            search_url = f"https://www.google.com/search?q={query}+manual+filetype:pdf&igu=1"
+            st.markdown(f'<iframe src="{search_url}" width="100%" height="600px"></iframe>', unsafe_allow_html=True)
         else:
             st.warning("Model Number အရင်ရိုက်ပါ")
 
@@ -54,8 +52,11 @@ with tab2:
         with st.chat_message("assistant"):
             if api_key:
                 try:
-                    # အဖြေကို မြန်မာလို ရအောင် Prompt ထည့်ထားသည်
-                    response = model.generate_content(f"Answer in Myanmar language: {prompt}")
+                    # Error 404 ကို ကျော်လွှားရန် generation_config ထည့်သွင်းခြင်း
+                    response = model.generate_content(
+                        f"Answer in Myanmar language concisely: {prompt}",
+                        generation_config=genai.types.GenerationConfig(candidate_count=1)
+                    )
                     st.markdown(response.text)
                     st.session_state.messages.append({"role": "assistant", "content": response.text})
                 except Exception as e:
@@ -69,22 +70,16 @@ with tab3:
     if uploaded_file is not None:
         try:
             doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-            text = ""
-            for page in doc:
-                text += page.get_text()
-            
+            text = "".join([page.get_text() for page in doc])
             st.success("PDF ဖတ်လို့ ပြီးပါပြီ!")
+            
             question = st.text_input("ဒီ PDF ထဲက ဘာကို သိချင်လဲ?")
             if st.button("Ask PDF"):
                 if api_key:
-                    try:
-                        # စာသားအရှည်ကြီးဖြစ်လျှင် ဖြတ်တောက်ရန်
-                        full_prompt = f"Using this text: {text[:15000]}, answer this in Myanmar: {question}"
-                        response = model.generate_content(full_prompt)
-                        st.write(response.text)
-                    except Exception as e:
-                        st.error(f"AI Processing Error: {e}")
+                    # စာသားအရမ်းရှည်လျှင် ဖြတ်တောက်ရန်
+                    response = model.generate_content(f"Based on this: {text[:10000]}, answer in Myanmar: {question}")
+                    st.write(response.text)
                 else:
-                    st.error("Sidebar မှာ API Key အရင်ထည့်ပေးပါ")
+                    st.error("API Key လိုအပ်ပါသည်")
         except Exception as e:
-            st.error(f"PDF Error: {e}")
+            st.error(f"Error: {e}")
